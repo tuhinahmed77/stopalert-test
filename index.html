@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StopAlert ফোন পরীক্ষা</title>
+<style>
+:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f4f6f8;--card:#fff;--text:#1a1f25;--mute:#566170;--line:#d9dfe6;--ok:#13703f;--bad:#b42318;--warn:#8f5200;--btn:#0b5cff;--btnt:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12161b;--card:#1a2027;--text:#e9edf1;--mute:#9ba6b3;--line:#2b343e;--ok:#4cc38a;--bad:#ff7b72;--warn:#e3b341;--btn:#6b97ff;--btnt:#0b1020}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12161b;--card:#1a2027;--text:#e9edf1;--mute:#9ba6b3;--line:#2b343e;--ok:#4cc38a;--bad:#ff7b72;--warn:#e3b341;--btn:#6b97ff;--btnt:#0b1020}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Noto Sans Bengali","Kalpurush","Siyam Rupali",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:.2em 0 .3em}
+h2{font-size:1.05rem;margin:0 0 .4em}
+p{margin:.3em 0}
+.mute{color:var(--mute);font-size:.92rem}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0}
+button{font:inherit;background:var(--btn);color:var(--btnt);border:0;border-radius:8px;padding:10px 14px;margin:6px 6px 0 0;min-height:44px}
+button.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--btn);outline-offset:2px}
+.badge{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--line);font-size:.9rem;margin-left:6px}
+.ok{color:var(--ok);border-color:var(--ok)}.bad{color:var(--bad);border-color:var(--bad)}.warn{color:var(--warn);border-color:var(--warn)}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+td{padding:4px 0;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+textarea{width:100%;min-height:150px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:.85rem/1.5 monospace}
+</style>
+</head>
+<body>
+<main>
+<h1>StopAlert: ফোন পরীক্ষা</h1>
+<p class="mute">এই পেজ খুলে চারটা পরীক্ষা করো। সব ফলাফল শেষে একসাথে কপি করে আমাকে পাঠাও। GPS ভালো পেতে জানালার পাশে বা বাইরে দাঁড়াও।</p>
+
+<section>
+<h2>১. GPS <span id="gpsB" class="badge">শুরু হয়নি</span></h2>
+<button id="gpsStart">GPS শুরু করো</button><button id="gpsStop" class="alt">বন্ধ করো</button>
+<table>
+<tr><td>অক্ষাংশ, দ্রাঘিমাংশ</td><td id="pos">-</td></tr>
+<tr><td>নির্ভুলতা (মিটার)</td><td id="acc">-</td></tr>
+<tr><td>গতি (মিটার/সেকেন্ড)</td><td id="spd">-</td></tr>
+<tr><td>আপডেট সংখ্যা</td><td id="cnt">0</td></tr>
+<tr><td>শেষ আপডেট (সেকেন্ড আগে)</td><td id="ago">-</td></tr>
+<tr><td>দুই আপডেটের সর্বোচ্চ বিরতি (সেকেন্ড)</td><td id="gap">-</td></tr>
+</table>
+<p class="mute">ব্যাকগ্রাউন্ড পরীক্ষা: GPS চালু রেখে ৩০ সেকেন্ডের জন্য অন্য অ্যাপে যাও বা স্ক্রিন বন্ধ করো, তারপর ফিরে এসে "সর্বোচ্চ বিরতি" দেখো। বিরতি বড় হলে ব্রাউজারে ট্র্যাকিং থেমে গিয়েছিল।</p>
+</section>
+
+<section>
+<h2>২. বাংলা ভয়েস <span id="voiceB" class="badge">পরীক্ষা হয়নি</span></h2>
+<p id="voiceInfo" class="mute">-</p>
+<button id="speak">"পরের স্টপ: কাঁটাবন" বলাও</button>
+<p class="mute">আওয়াজ শুনতে পেয়েছ?</p>
+<button id="heardY" class="alt">হ্যাঁ, শুনেছি</button><button id="heardN" class="alt">না, শুনিনি</button>
+</section>
+
+<section>
+<h2>৩. স্ক্রিন জাগিয়ে রাখা <span id="wlB" class="badge">শুরু হয়নি</span></h2>
+<button id="wlStart">স্ক্রিন জাগিয়ে রাখো</button>
+<p class="mute">চালু করে ফোন ১-২ মিনিট ছেড়ে দাও। স্ক্রিন বন্ধ না হলে কাজ করছে।</p>
+</section>
+
+<section>
+<h2>৪. কম্পন <span id="vibB" class="badge">পরীক্ষা হয়নি</span></h2>
+<button id="vib">ফোন কাঁপাও</button>
+</section>
+
+<section>
+<h2>ফলাফল</h2>
+<button id="mk">ফলাফল তৈরি করো</button>
+<textarea id="out" readonly placeholder="এখানে ফলাফল আসবে। পুরোটা কপি করে আমাকে পাঠাও।"></textarea>
+</section>
+</main>
+<script>
+var $ = function (id) { return document.getElementById(id); };
+function badge(id, cls, text) { var e = $(id); e.className = 'badge ' + cls; e.textContent = text; }
+
+// 1. GPS
+var wid = null, count = 0, lastT = null, maxGap = 0, lastAcc = null;
+$('gpsStart').onclick = function () {
+  if (!('geolocation' in navigator)) { badge('gpsB', 'bad', 'এই ব্রাউজারে GPS নেই'); return; }
+  if (wid !== null) return;
+  count = 0; lastT = null; maxGap = 0;
+  badge('gpsB', 'warn', 'অবস্থান খুঁজছি…');
+  wid = navigator.geolocation.watchPosition(function (p) {
+    var now = Date.now();
+    if (lastT !== null) { var g = (now - lastT) / 1000; if (g > maxGap) maxGap = g; }
+    lastT = now; count++;
+    var c = p.coords; lastAcc = c.accuracy;
+    $('pos').textContent = c.latitude.toFixed(5) + ', ' + c.longitude.toFixed(5);
+    $('acc').textContent = Math.round(c.accuracy);
+    $('spd').textContent = c.speed == null ? '-' : c.speed.toFixed(1);
+    $('cnt').textContent = count;
+    $('gap').textContent = maxGap.toFixed(1);
+    if (c.accuracy <= 30) badge('gpsB', 'ok', 'ভালো (' + Math.round(c.accuracy) + ' মি)');
+    else if (c.accuracy <= 100) badge('gpsB', 'warn', 'মোটামুটি (' + Math.round(c.accuracy) + ' মি)');
+    else badge('gpsB', 'bad', 'দুর্বল (' + Math.round(c.accuracy) + ' মি)');
+  }, function (e) {
+    var m = e.code === 1 ? 'অনুমতি নেই বা ব্লক করা' : e.code === 2 ? 'অবস্থান পাওয়া যাচ্ছে না' : 'সময় শেষ';
+    badge('gpsB', 'bad', 'ত্রুটি: ' + m);
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+};
+$('gpsStop').onclick = function () {
+  if (wid !== null) { navigator.geolocation.clearWatch(wid); wid = null; badge('gpsB', 'warn', 'বন্ধ করা হয়েছে'); }
+};
+setInterval(function () { if (lastT !== null) $('ago').textContent = Math.round((Date.now() - lastT) / 1000); }, 1000);
+
+// 2. Bengali voice
+var heard = 'জানা নেই';
+function loadVoices() {
+  var v = speechSynthesis.getVoices();
+  var bn = v.filter(function (x) { return /^bn/i.test(x.lang); });
+  $('voiceInfo').textContent = 'মোট ভয়েস: ' + v.length + ', বাংলা ভয়েস: ' + bn.length +
+    (bn.length ? ' (' + bn.map(function (x) { return x.name; }).join(', ') + ')' : '');
+  if (bn.length) badge('voiceB', 'ok', 'বাংলা ভয়েস আছে');
+  else badge('voiceB', 'warn', 'বাংলা ভয়েস পাওয়া যায়নি');
+}
+if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+else { badge('voiceB', 'bad', 'speech synthesis নেই'); }
+$('speak').onclick = function () {
+  if (!('speechSynthesis' in window)) return;
+  var u = new SpeechSynthesisUtterance('পরের স্টপ: কাঁটাবন');
+  u.lang = 'bn-BD';
+  var bn = speechSynthesis.getVoices().filter(function (x) { return /^bn/i.test(x.lang); })[0];
+  if (bn) u.voice = bn;
+  u.onerror = function () { badge('voiceB', 'bad', 'বলাতে ত্রুটি'); };
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+};
+$('heardY').onclick = function () { heard = 'হ্যাঁ'; badge('voiceB', 'ok', 'শোনা গেছে'); };
+$('heardN').onclick = function () { heard = 'না'; badge('voiceB', 'bad', 'শোনা যায়নি'); };
+
+// 3. Wake lock
+var wl = null;
+function getWL() {
+  navigator.wakeLock.request('screen').then(function (l) {
+    wl = l; badge('wlB', 'ok', 'স্ক্রিন জাগানো আছে');
+    l.addEventListener('release', function () { badge('wlB', 'warn', 'ছেড়ে দেওয়া হয়েছে'); });
+  }).catch(function (e) { badge('wlB', 'bad', 'ব্যর্থ: ' + e.name); });
+}
+$('wlStart').onclick = function () {
+  if (!('wakeLock' in navigator)) { badge('wlB', 'bad', 'এই ব্রাউজারে Wake Lock নেই'); return; }
+  getWL();
+};
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && wl && wl.released) getWL();
+});
+
+// 4. Vibration
+$('vib').onclick = function () {
+  if (!('vibrate' in navigator)) { badge('vibB', 'bad', 'এই ব্রাউজারে কম্পন নেই'); return; }
+  var r = navigator.vibrate([200, 100, 200]);
+  badge('vibB', r ? 'ok' : 'warn', r ? 'কম্পন পাঠানো হয়েছে, অনুভব করলে ঠিক আছে' : 'কম্পন ব্লক');
+};
+
+// Summary
+$('mk').onclick = function () {
+  var t = [
+    'ব্রাউজার: ' + navigator.userAgent,
+    'GPS: ' + $('gpsB').textContent + ', নির্ভুলতা ' + (lastAcc == null ? '-' : Math.round(lastAcc)) + ' মি, আপডেট ' + count + ', সর্বোচ্চ বিরতি ' + maxGap.toFixed(1) + ' সেকেন্ড',
+    'বাংলা ভয়েস: ' + $('voiceB').textContent + ' | ' + $('voiceInfo').textContent + ' | শুনেছি: ' + heard,
+    'স্ক্রিন জাগানো: ' + $('wlB').textContent,
+    'কম্পন: ' + $('vibB').textContent
+  ].join('\n');
+  var o = $('out'); o.value = t; o.focus(); o.select();
+  try { navigator.clipboard.writeText(t); } catch (e) {}
+};
+</script>
+</body>
+</html>
