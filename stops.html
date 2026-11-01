@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>স্টপ রেকর্ডার</title>
+<style>
+:root{color-scheme:light dark;--bg:#f4f6f8;--card:#fff;--text:#1a1f25;--mute:#566170;--line:#d9dfe6;--ok:#13703f;--bad:#b42318;--btn:#0b5cff;--btnt:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#12161b;--card:#1a2027;--text:#e9edf1;--mute:#9ba6b3;--line:#2b343e;--ok:#4cc38a;--bad:#ff7b72;--btn:#6b97ff;--btnt:#0b1020}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Noto Sans Bengali","Kalpurush","Siyam Rupali",system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:.2em 0}
+h2{font-size:1.05rem;margin:0 0 .4em}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:14px 0}
+.mute{color:var(--mute);font-size:.92rem}
+input[type=text]{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+button{font:inherit;background:var(--btn);color:var(--btnt);border:0;border-radius:8px;padding:10px 14px;margin:8px 8px 0 0;min-height:44px}
+button.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+button.small{min-height:36px;padding:4px 10px;margin:0}
+#msg{margin-top:8px;font-weight:600}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td,th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left}
+textarea{width:100%;min-height:140px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;font:.85rem/1.5 monospace}
+</style>
+</head>
+<body>
+<main>
+<h1>স্টপ রেকর্ডার</h1>
+<p class="mute">রুটে বাসে বা পায়ে হেঁটে প্রতিটা স্টপে গিয়ে সেখানকার নাম ও GPS অবস্থান সংরক্ষণ করো। বাস যেখানে আসলে থামে, ঠিক সেই জায়গায় দাঁড়াও। তথ্য শুধু এই ফোনের ব্রাউজারে থাকে, তাই ব্রাউজারের ডেটা মোছার আগে নিচের CSV কপি করে রাখো।</p>
+
+<section>
+<h2>নতুন স্টপ</h2>
+<input id="name" type="text" placeholder="স্টপের নাম (যেমন: কাঁটাবন)" autocomplete="off">
+<button id="cap">অবস্থান নিয়ে সংরক্ষণ করো</button>
+<p id="msg" class="mute"></p>
+<p class="mute">বোতাম চাপার পর প্রায় ৮ সেকেন্ড স্থির দাঁড়াও। সবচেয়ে নির্ভুল অবস্থানটা সংরক্ষণ হবে। নির্ভুলতা ৩০ মিটারের বেশি এলে আবার চেষ্টা করো (খোলা জায়গায় ভালো আসে)।</p>
+</section>
+
+<section>
+<h2>সংরক্ষিত স্টপ (<span id="count">0</span>টি)</h2>
+<table>
+<thead><tr><th>#</th><th>নাম</th><th>অক্ষাংশ, দ্রাঘিমাংশ</th><th>±মি</th><th></th></tr></thead>
+<tbody id="rows"></tbody>
+</table>
+</section>
+
+<section>
+<h2>CSV</h2>
+<button id="mk">CSV তৈরি করো</button>
+<button id="clr" class="alt">সব মুছে ফেলো</button>
+<textarea id="out" readonly placeholder="এখানে CSV আসবে। পুরোটা কপি করে আমাকে পাঠাও।"></textarea>
+</section>
+</main>
+<script>
+var KEY = 'stopalert-stops-v1';
+var $ = function (id) { return document.getElementById(id); };
+function load() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+function save(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {} }
+var stops = load();
+
+function msg(t, cls) { var m = $('msg'); m.textContent = t; m.className = cls || 'mute'; }
+
+function render() {
+  $('count').textContent = stops.length;
+  var tb = $('rows'); tb.textContent = '';
+  stops.forEach(function (s, i) {
+    var tr = document.createElement('tr');
+    [i + 1, s.name, s.lat.toFixed(6) + ', ' + s.lng.toFixed(6), Math.round(s.acc)].forEach(function (v) {
+      var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+    });
+    var td = document.createElement('td');
+    var b = document.createElement('button');
+    b.className = 'small alt'; b.textContent = 'মুছো';
+    b.onclick = function () { stops.splice(i, 1); save(stops); render(); };
+    td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
+  });
+}
+
+$('cap').onclick = function () {
+  var name = $('name').value.trim();
+  if (!name) { msg('আগে স্টপের নাম লেখো', 'bad'); return; }
+  if (!('geolocation' in navigator)) { msg('এই ব্রাউজারে GPS নেই', 'bad'); return; }
+  var btn = $('cap'); btn.disabled = true;
+  var best = null, left = 8, done = false, wid = null, timer = null;
+
+  function finish(err) {
+    if (done) return; done = true;
+    clearInterval(timer);
+    if (wid !== null) navigator.geolocation.clearWatch(wid);
+    btn.disabled = false;
+    if (err) { msg(err, 'bad'); return; }
+    if (!best) { msg('অবস্থান পাওয়া যায়নি। খোলা জায়গায় গিয়ে আবার চেষ্টা করো।', 'bad'); return; }
+    stops.push({ name: name, lat: best.lat, lng: best.lng, acc: best.acc });
+    save(stops); render(); $('name').value = '';
+    msg('সংরক্ষিত: ' + name + ' (নির্ভুলতা ±' + Math.round(best.acc) + ' মিটার)' +
+        (best.acc > 30 ? ' — নির্ভুলতা কম, চাইলে মুছে আবার নাও' : ''), best.acc > 30 ? 'bad' : 'ok');
+  }
+
+  msg('অবস্থান নিচ্ছি… ' + left + ' সেকেন্ড');
+  timer = setInterval(function () {
+    left--; msg('অবস্থান নিচ্ছি… ' + left + ' সেকেন্ড');
+    if (left <= 0) finish();
+  }, 1000);
+  wid = navigator.geolocation.watchPosition(function (p) {
+    var c = p.coords;
+    if (!best || c.accuracy < best.acc) best = { lat: c.latitude, lng: c.longitude, acc: c.accuracy };
+  }, function (e) {
+    finish(e.code === 1 ? 'অবস্থানের অনুমতি দেওয়া হয়নি বা ব্লক করা আছে' : 'অবস্থান পাওয়া যাচ্ছে না');
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+};
+
+$('mk').onclick = function () {
+  var lines = ['order,name,latitude,longitude'];
+  stops.forEach(function (s, i) {
+    lines.push((i + 1) + ',"' + s.name.replace(/"/g, '""') + '",' + s.lat.toFixed(6) + ',' + s.lng.toFixed(6));
+  });
+  var o = $('out'); o.value = lines.join('\n'); o.focus(); o.select();
+  try { navigator.clipboard.writeText(o.value); } catch (e) {}
+};
+
+$('clr').onclick = function () {
+  if (confirm('সব সংরক্ষিত স্টপ মুছে যাবে। নিশ্চিত?')) { stops = []; save(stops); render(); $('out').value = ''; }
+};
+
+render();
+</script>
+</body>
+</html>
